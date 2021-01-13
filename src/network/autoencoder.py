@@ -1,4 +1,6 @@
+import tensorflow_addons as tfa
 import tensorflow as tf
+import numpy as np
 from network import encoder, decoder
 
 class AutoEncoder:
@@ -7,19 +9,18 @@ class AutoEncoder:
         self.input_shape = (128, 128, 1)
 
         self.image_input = tf.keras.layers.Input(shape = self.input_shape, name='input_image')
-        self.label_input = tf.keras.layers.Input(shape = (1,), name='input_label')
 
         self.encoder = encoder.Encoder()
-        self.decoder = decoder.Decoder(self.input_shape)
+        self.decoder = decoder.Decoder((128, 128, 1))
 
         self.enc = self.encoder(self.image_input)
         
-        self.dec = self.decoder([ self.enc, self.label_input ])
+        self.dec = self.decoder(self.enc)
 
-        self.model = tf.keras.Model(inputs = [ self.image_input, self.label_input ], outputs = self.dec)
+        self.model = tf.keras.Model(self.image_input, self.dec)
         self.model.compile(
-            optimizer = tf.keras.optimizers.Adam(lr=1e-3),
-            loss = 'mse'
+            optimizer = tf.keras.optimizers.Adam(0.001),
+            loss = tfa.losses.TripletSemiHardLoss()
         )
 
         return self.model

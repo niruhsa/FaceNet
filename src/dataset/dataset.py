@@ -1,3 +1,4 @@
+import tensorflow as tf
 import numpy as np
 import cv2
 import os
@@ -7,6 +8,7 @@ class Dataset:
     def load_dataset(self, dataset_dir = '../../Datasets/LFW-Cropped/converted/'):
         self.dataset_dir = dataset_dir
         self.images = {}
+        self.image_references = {}
         self.people = None
         self.image_dataset = []
         self.label_dataset = []
@@ -16,7 +18,7 @@ class Dataset:
             if not self.people:
                 self.people = people
 
-        for person in self.people:
+        for person in self.people[:2]:
             person_dir = os.path.join(self.dataset_dir, person)
             for _, _, faces in os.walk(person_dir):
                 for face in faces:
@@ -34,11 +36,8 @@ class Dataset:
         for person in list(self.images.keys()):
             images = self.images[person]
             for image in images:
-                self.image_dataset.append(image)
-                self.label_dataset.append(np.array(person).astype(np.float32))
-
-        print(len(self.image_dataset))
-        print(len(self.label_dataset))
+                self.image_dataset.append(np.reshape(image, (128, 128, 1)))
+                self.label_dataset.append(np.array(person).astype(np.uint32))
 
         return self.image_dataset, self.label_dataset
 
