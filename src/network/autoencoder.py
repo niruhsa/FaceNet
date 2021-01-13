@@ -11,15 +11,15 @@ class AutoEncoder:
         self.image_input = tf.keras.layers.Input(shape = self.input_shape, name='input_image')
 
         self.encoder = encoder.Encoder()
-        self.decoder = decoder.Decoder((128, 128, 1))
+        self.decoder = decoder.Decoder(self.input_shape)
 
         self.enc = self.encoder(self.image_input)
         
         self.dec = self.decoder(self.enc)
 
-        self.model = tf.keras.Model(self.image_input, self.dec)
+        self.model = tf.keras.Model(self.image_input, self.enc)
         self.model.compile(
-            optimizer = tf.keras.optimizers.Adam(0.001),
+            optimizer = tf.keras.optimizers.Adam(1e-3),
             loss = tfa.losses.TripletSemiHardLoss()
         )
 
