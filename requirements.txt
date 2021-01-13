@@ -1,5 +1,3 @@
 tensorflow
 opencv-python
 numpy
-data
-wandb
