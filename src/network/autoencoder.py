@@ -7,7 +7,7 @@ class AutoEncoder:
 
     def __new__(self):
         strategy = tf.distribute.MultiWorkerMirroredStrategy()
-        with mirrored_strategy.scope():
+        with strategy.scope():
             self.input_shape = (128, 128, 1)
 
             self.image_input = tf.keras.layers.Input(shape = self.input_shape, name='input_image')
