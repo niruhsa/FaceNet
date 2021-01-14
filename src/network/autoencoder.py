@@ -23,4 +23,6 @@ class AutoEncoder:
             loss = tfa.losses.TripletSemiHardLoss()
         )
 
+        self.model = tf.keras.models.load_model('data/models/2169')
+
         return self.model
