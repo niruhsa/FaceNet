@@ -1,3 +1,6 @@
 tensorflow
 opencv-python
 numpy
+wandb
+tensorflow_addons
+scipy

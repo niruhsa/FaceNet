@@ -1,69 +1,40 @@
 import tensorflow as tf
+from tensorflow.keras import Model, layers
 
-class Encoder(tf.keras.Model):
+class Encoder(Model):
 
     def __init__(self):
         super(Encoder, self).__init__()
-        self.build_network()
 
-    def build_network(self):
-        # 128 x 128 x 1 -> 64 x 64 x 128
-        self.conv2d_1_1 = tf.keras.layers.Conv2D(512, kernel_size=(2, 2), strides=(2, 2), activation='relu', padding='same', name='conv2d_1_1')
-        self.mp2d_1_1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2, padding='same', name='mp2d_1_1')
+    def create_block(self, inputs, filters, kernels_low, kernels_high):
+        net = layers.Conv2D(filters, kernels_low, strides = 1, padding = 'same')(inputs)
+        net = layers.DepthwiseConv2D(kernels_low, strides = 1, padding = 'same')(net)
+        net = layers.BatchNormalization()(net)
 
-        # 64 x 64 x 128 -> 32 x 32 x 128
-        self.conv2d_1_2 = tf.keras.layers.Conv2D(512, kernel_size=(2, 2), strides=(2, 2), activation='relu', padding='same', name='conv2d_1_2')
-        self.mp2d_1_2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2, padding='same', name='mp2d_1_2')
-        self.rnorm_1_2 = tf.keras.layers.BatchNormalization()
-
-        # 32 x 32 x 64 -> 16 x 16 x 64
-        self.conv2d_2_1 = tf.keras.layers.Conv2D(256, kernel_size=(2, 2), strides=(2, 2), activation='relu', padding='same', name='conv2d_2_1')
-        self.mp2d_2_1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2, padding='same', name='mp2d_2_1')
-
-        # 16 x 16 x 64 -> 8 x 8 x 64
-        self.conv2d_2_2 = tf.keras.layers.Conv2D(256, kernel_size=(2, 2), strides=(2, 2), activation='relu', padding='same', name='conv2d_2_2')
-        self.mp2d_2_2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2, padding='same', name='mp2d_2_2')
-        self.rnorm_2_2 = tf.keras.layers.BatchNormalization()
-
-        # 8 x 8 x 32 -> 4 x 4 x 32
-        self.conv2d_3_1 = tf.keras.layers.Conv2D(128, kernel_size=(2, 2), strides=(2, 2), activation='relu', padding='same', name='conv2d_3_1')
-        self.mp2d_3_1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2, padding='same', name='mp2d_3_1')
-
-        # 4 x 4 x 32 -> 2 x 2 x 32
-        self.conv2d_3_2 = tf.keras.layers.Conv2D(128, kernel_size=(2, 2), strides=(2, 2), activation='relu', padding='same', name='conv2d_3_2')
-        self.mp2d_3_2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2, padding='same', name='mp2d_3_2')
-        self.rnorm_3_2 = tf.keras.layers.BatchNormalization()
-        self.dp_1 = tf.keras.layers.Dropout(0.5)
-
-        self.ft_1 = tf.keras.layers.Flatten(name='ft_1')
-        self.d_1 = tf.keras.layers.Dense(128, name='d_1', activation=None)
-        self.l2norm = tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1))
-
-    def call(self, inputs, training = True):
-        net = self.conv2d_1_1(inputs)
-        net = self.mp2d_1_1(net)
-
-        net = self.conv2d_1_2(net)
-        net = self.mp2d_1_2(net)
-        net = self.rnorm_1_2(net)
-
-        net = self.conv2d_2_1(net)
-        net = self.mp2d_2_1(net)
-
-        net = self.conv2d_2_2(net)
-        net = self.mp2d_2_2(net)
-        net = self.rnorm_2_2(net)
-
-        net = self.conv2d_3_1(net)
-        net = self.mp2d_3_1(net)
-
-        net = self.conv2d_3_2(net)
-        net = self.mp2d_3_2(net)
-        net = self.rnorm_3_2(net)
-        net = self.dp_1(net)
-
-        net = self.ft_1(net)
-        net = self.d_1(net)
-        net = self.l2norm(net)
+        net = layers.Conv2D(filters, kernels_high, strides = 1, padding = 'same')(net)
+        net = layers.DepthwiseConv2D(kernels_high, strides = 1, padding = 'same')(net)
+        net = layers.BatchNormalization()(net)
+        
+        net = layers.Conv2D(filters * 2, 1, strides = 2, padding = 'same')(net)
+        net = layers.PReLU(shared_axes = [1, 2])(net)
 
         return net
+
+    def call(self, inputs, training = True):
+        inputs = layers.Input(shape = inputs)
+
+        net = self.create_block(inputs, 2, 1, 3)
+        net = self.create_block(net, 4, 1, 3)
+        net = self.create_block(net, 6, 1, 3)
+        net = self.create_block(net, 8, 1, 3)
+        net = self.create_block(net, 16, 1, 3)
+        net = self.create_block(net, 32, 1, 3)
+        net = self.create_block(net, 64, 1, 3)
+        
+        net = layers.Flatten()(net)
+
+        net = layers.Dense(64)(net)
+
+        net = tf.math.l2_normalize(net, axis = 1)
+
+        return Model(inputs, net, name = 'facenet')
